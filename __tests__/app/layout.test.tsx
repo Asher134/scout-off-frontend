@@ -230,13 +230,18 @@ describe('RootLayout', () => {
 
   it('exposes SEO metadata for the app', () => {
     expect(metadata.title).toBe('ScoutOff — Decentralized Football Scouting');
-    expect(metadata.metadataBase).toBeInstanceOf(URL);
+    // The origin comes from NEXT_PUBLIC_APP_URL (set to the production URL
+    // in CI's env), never from a hard-coded value.
+    expect(metadata.metadataBase).toEqual(
+      new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'),
+    );
     expect(metadata.openGraph).toEqual({
       siteName: 'ScoutOff',
       type: 'website',
     });
-    // No hard-coded production origin or SVG OG image in the root metadata.
-    expect(JSON.stringify(metadata)).not.toMatch(/scoutoff\.app|\.svg/);
+    // No hard-coded production origin or SVG OG image anywhere else.
+    const { metadataBase: _origin, ...rest } = metadata;
+    expect(JSON.stringify(rest)).not.toMatch(/scoutoff\.app|\.svg/);
   });
 
   it('renders ConfigWarningBanner when config is invalid', async () => {

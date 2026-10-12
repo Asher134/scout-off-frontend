@@ -15,6 +15,17 @@ import { checkA11y, configureAxe, injectAxe } from 'axe-playwright';
  */
 const config: TestRunnerConfig = {
   async preVisit(page, context) {
+    // getStoryContext reads the preview's story store, which throws
+    // (SB_PREVIEW_API_0011) until the story index has loaded — a race the
+    // first stories of a run lose on slower CI runners.
+    await page.waitForFunction(
+      () =>
+        (
+          window as unknown as {
+            __STORYBOOK_PREVIEW__?: { storyStoreValue?: unknown };
+          }
+        ).__STORYBOOK_PREVIEW__?.storyStoreValue !== undefined,
+    );
     // Stories can request a viewport, e.g. mobile-only UI:
     // `parameters: { testRunner: { viewport: { width: 375, height: 812 } } }`.
     const storyContext = await getStoryContext(page, context);

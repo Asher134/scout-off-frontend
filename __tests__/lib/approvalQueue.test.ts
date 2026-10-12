@@ -93,10 +93,12 @@ describe('approval intent queue', () => {
   });
 
   it('lists intents oldest-first', async () => {
+    // Pin the clock for each whole enqueue (not mockReturnValueOnce):
+    // fake-indexeddb reads Date.now itself, which would consume a one-shot.
     const now = jest.spyOn(Date, 'now');
-    now.mockReturnValueOnce(2_000);
+    now.mockReturnValue(2_000);
     const later = await enqueueApprovalIntent(intentInput());
-    now.mockReturnValueOnce(1_000);
+    now.mockReturnValue(1_000);
     const earlier = await enqueueApprovalIntent(intentInput());
     now.mockRestore();
 
