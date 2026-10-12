@@ -26,7 +26,7 @@ function truncated(address: string) {
   return `${address.slice(0, 4)}…${address.slice(-4)}`;
 }
 
-/** Cache names and the URLs stored in each. */
+/** Cache names and the URLs stored in each (opens every cache it lists). */
 function cacheContents(page: import('@playwright/test').Page) {
   return page.evaluate(async () => {
     const out: Record<string, string[]> = {};
@@ -79,11 +79,16 @@ test.describe('Shared Device Cache Leak Prevention', () => {
       .click();
     await expect(page.getByText(truncated(WALLET_A_ADDRESS))).toHaveCount(0);
 
+    // caches.match, not caches.open: opening a just-deleted cache would
+    // re-create it (empty) and race the app's purge.
     await expect
-      .poll(() => cacheContents(page))
-      .toEqual({
-        'static-assets': ['/icons/icon-192.png'],
-      });
+      .poll(() =>
+        page.evaluate(async () => ({
+          watchlist: (await caches.match('/api/watchlist')) !== undefined,
+          icon: (await caches.match('/icons/icon-192.png')) !== undefined,
+        })),
+      )
+      .toEqual({ watchlist: false, icon: true });
 
     // User B signs in on the same browser and finds nothing of A's — even
     // offline, where only Cache Storage could answer.
