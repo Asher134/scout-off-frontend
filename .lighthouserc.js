@@ -2,10 +2,16 @@ module.exports = {
   ci: {
     collect: {
       startServerCommand: 'npm run start',
+      // Public pages only. Lighthouse visits anonymously, so the
+      // wallet-gated dashboards (/player, /scout, /validator, ...) never
+      // render for it: it would only time their client-side redirect to
+      // /?reason=wallet-required, not the dashboards themselves. Pages
+      // that read the contract server-side (e.g. /validator/leaderboard)
+      // are out too: CI's placeholder contract id makes them error.
       url: [
         'http://localhost:3000/en',
-        'http://localhost:3000/en/player',
-        'http://localhost:3000/en/scout',
+        'http://localhost:3000/en/sponsorship',
+        'http://localhost:3000/en/privacy',
       ],
       // A single run is too noisy on shared GitHub-hosted runners — one busy
       // neighbor can spike total-blocking-time enough to fail the 0.8
