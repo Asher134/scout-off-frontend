@@ -7,8 +7,9 @@ import { privateJson } from '@/lib/httpResponses';
 // ownerWallet (their own academy only) — see lib/academyAuth.ts (issue #1173).
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string; wallet: string } },
+  props: { params: Promise<{ id: string; wallet: string }> },
 ) {
+  const params = await props.params;
   const manager = await requireAcademyManager(req, params.id);
   if (!manager) {
     return privateJson({ error: 'Unauthorized' }, { status: 401 });

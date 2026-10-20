@@ -13,8 +13,9 @@ import { privateJson } from '@/lib/httpResponses';
  */
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  props: { params: Promise<{ id: string }> },
 ) {
+  const params = await props.params;
   const admin = requireAdminWallet(req);
   if (!admin) {
     return privateJson({ error: 'Unauthorized' }, { status: 401 });

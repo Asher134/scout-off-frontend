@@ -11,8 +11,9 @@ const STELLAR_PUBLIC_KEY_RE = /^G[A-Z2-7]{55}$/;
 // docs/academy-validator-model.md's "Admin flow" section (issue #1173).
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  props: { params: Promise<{ id: string }> },
 ) {
+  const params = await props.params;
   const manager = await requireAcademyManager(req, params.id);
   if (!manager) {
     return privateJson({ error: 'Unauthorized' }, { status: 401 });

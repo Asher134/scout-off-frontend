@@ -19,8 +19,9 @@ export const runtime = 'nodejs';
  */
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  props: { params: Promise<{ id: string }> },
 ) {
+  const params = await props.params;
   const adminWallet = requireAdminWallet(req);
   if (!adminWallet) {
     return privateJson({ error: 'Forbidden' }, { status: 403 });
