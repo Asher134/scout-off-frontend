@@ -78,6 +78,27 @@ describe('useScoutDashboardFilters', () => {
     });
   });
 
+  it('counts down with a single interval per rate-limit event', () => {
+    jest.useFakeTimers();
+    const intervalSpy = jest.spyOn(global, 'setInterval');
+    try {
+      const { result, rerender, props } = setup();
+      rerender({ ...props, isRateLimited: true, retryAfterSec: 5 });
+      const seen = [result.current.remainingSec];
+      for (let i = 0; i < 5; i++) {
+        act(() => {
+          jest.advanceTimersByTime(1000);
+        });
+        seen.push(result.current.remainingSec);
+      }
+      expect(seen).toEqual([5, 4, 3, 2, 1, null]);
+      expect(intervalSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      intervalSpy.mockRestore();
+      jest.useRealTimers();
+    }
+  });
+
   it('syncs the compare selection to ?ids= and caps it', () => {
     mockParams = new URLSearchParams('ids=a,b');
     const { result } = setup();

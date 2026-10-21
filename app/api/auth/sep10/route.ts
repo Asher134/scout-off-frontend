@@ -17,6 +17,14 @@ import { withRouteTelemetry } from '@/lib/telemetry';
 // Node.js runtime, not edge.
 export const runtime = 'nodejs';
 
+const CHALLENGE_TIMEOUT_SEC = 300;
+
+function getNetworkPassphrase(): string {
+  return process.env.NEXT_PUBLIC_NETWORK === 'mainnet'
+    ? Networks.PUBLIC
+    : Networks.TESTNET;
+}
+
 // Same check as lib/stellar's isValidStellarAddress, without importing that
 // module's RPC client into the auth route. Only G-addresses pass; muxed
 // (M...) accounts aren't supported.
@@ -109,10 +117,7 @@ async function postSep10(req: NextRequest) {
   const config = getSep10Config();
   if (!config) return serverNotConfigured();
   const { serverKey, homeDomain } = config;
-  const network =
-    process.env.NEXT_PUBLIC_NETWORK === 'mainnet'
-      ? Networks.PUBLIC
-      : Networks.TESTNET;
+  const network = getNetworkPassphrase();
 
   try {
     // verifyChallengeTxSigners' second argument is the server's *public* key
@@ -215,20 +220,15 @@ async function getSep10(req: NextRequest) {
   const config = getSep10Config();
   if (!config) return serverNotConfigured();
   const { serverKey, homeDomain } = config;
-  const network =
-    process.env.NEXT_PUBLIC_NETWORK === 'mainnet'
-      ? Networks.PUBLIC
-      : Networks.TESTNET;
+  const network = getNetworkPassphrase();
 
   try {
-    const { Keypair } = await import('@stellar/stellar-sdk');
     const serverKeypair = Keypair.fromSecret(serverKey);
-    const { buildChallengeTx } = (await import('@stellar/stellar-sdk')).WebAuth;
-    const challengeXdr = buildChallengeTx(
+    const challengeXdr = WebAuth.buildChallengeTx(
       serverKeypair,
       account,
       homeDomain,
-      300,
+      CHALLENGE_TIMEOUT_SEC,
       network,
       homeDomain,
     );

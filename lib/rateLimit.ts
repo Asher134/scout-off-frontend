@@ -50,16 +50,44 @@ interface RateLimitStore {
 
 type RateEntry = { count: number; resetAt: number };
 
+/** Hard cap on tracked keys; the oldest (first-inserted) key is dropped past it. */
+export const IN_MEMORY_MAX_ENTRIES = 10_000;
+/** Expired entries are swept every this many increments (no timers, so nothing is kept alive). */
+export const IN_MEMORY_SWEEP_EVERY = 1_000;
+
 class InMemoryStore implements RateLimitStore {
   private map = new Map<string, RateEntry>();
+  private callsSinceSweep = 0;
+
+  get size() {
+    return this.map.size;
+  }
+
+  private sweep(now: number) {
+    for (const [key, entry] of this.map) {
+      if (now >= entry.resetAt) this.map.delete(key);
+    }
+  }
 
   async increment(key: string, windowMs: number) {
     const now = Date.now();
+
+    if (++this.callsSinceSweep >= IN_MEMORY_SWEEP_EVERY) {
+      this.callsSinceSweep = 0;
+      this.sweep(now);
+    }
+
     const entry = this.map.get(key);
 
     if (!entry || now >= entry.resetAt) {
       const resetAt = now + windowMs;
+      // Delete first so a renewed key moves to the end of insertion order.
+      this.map.delete(key);
       this.map.set(key, { count: 1, resetAt });
+      if (this.map.size > IN_MEMORY_MAX_ENTRIES) {
+        const oldest = this.map.keys().next().value;
+        if (oldest !== undefined) this.map.delete(oldest);
+      }
       return { count: 1, ttlMs: windowMs };
     }
 
@@ -162,6 +190,14 @@ function getStore(): RateLimitStore {
 export function _resetRateLimitStoreForTests(): void {
   cachedStore = null;
   warnedMissingRedisInProd = false;
+}
+
+/**
+ * Test-only: number of keys tracked by the in-memory store, or null when the
+ * active store isn't the in-memory one. Not used by application code.
+ */
+export function _getInMemoryStoreSizeForTests(): number | null {
+  return cachedStore instanceof InMemoryStore ? cachedStore.size : null;
 }
 
 // ── Public API ────────────────────────────────────────────────────────────
